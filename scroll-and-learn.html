@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scroll &amp; Learn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --page: #ECEFF3;
+    --ink: #14161A;
+    --ink2: #4A5160;
+    --line: rgba(20,22,26,.18);
+    --font: "Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #12141A;
+      --ink: #F1F3F7;
+      --ink2: #A5ACBA;
+      --line: rgba(241,243,247,.22);
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #12141A;
+    --ink: #F1F3F7;
+    --ink2: #A5ACBA;
+    --line: rgba(241,243,247,.22);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid currentColor; outline-offset: -4px; }
+
+  /* ---------- Home ---------- */
+  .head { padding: 34px 22px 26px; max-width: 640px; margin: 0 auto; }
+  .head h1 { margin: 0 0 10px; font-size: clamp(36px, 10vw, 54px); line-height: 1; letter-spacing: -0.03em; font-weight: 800; }
+  .head p { margin: 0; font-size: 18px; line-height: 1.45; color: var(--ink2); max-width: 30rem; }
+  .tally { margin-top: 14px; font-size: 15px; color: var(--ink2); }
+
+  .bands { max-width: 640px; margin: 0 auto; }
+  .band {
+    position: relative; display: block; width: 100%; min-height: 150px;
+    border: 0; margin: 0; padding: 22px 130px 22px 22px; text-align: left; cursor: pointer;
+    background: var(--bg); color: var(--fg); overflow: hidden;
+  }
+  .band h2 { margin: 0 0 6px; font-size: 32px; line-height: 1; letter-spacing: -0.025em; font-weight: 800; }
+  .band .blurb { margin: 0 0 12px; font-size: 16px; line-height: 1.35; opacity: .9; }
+  .band .meta { font-size: 14px; font-weight: 600; }
+  .band .meta.done { display: inline-block; padding: 3px 10px; border-radius: 99px; background: var(--accent); color: var(--bg); }
+  .band svg { position: absolute; right: 18px; bottom: 16px; width: 96px; height: 96px; color: var(--accent); }
+  .band:active { filter: brightness(1.08); }
+
+  .foot { max-width: 640px; margin: 0 auto; padding: 22px; }
+  .linkbtn { background: none; border: 0; padding: 6px 0; color: var(--ink2); font-size: 14px; text-decoration: underline; cursor: pointer; }
+
+  /* ---------- Lesson ---------- */
+  #lesson { position: fixed; inset: 0; z-index: 10; background: var(--bg); color: var(--fg); }
+  #lesson[hidden] { display: none; }
+  .top {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 12px;
+    background: var(--bg);
+  }
+  .top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .back { background: none; border: 0; padding: 8px 10px 8px 0; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .top-title { font-size: 15px; font-weight: 600; opacity: .85; }
+  .segs { display: flex; gap: 4px; }
+  .seg { flex: 1; height: 4px; border-radius: 4px; background: color-mix(in srgb, var(--fg) 25%, transparent); transition: background .25s; }
+  .seg.on { background: var(--accent); }
+
+  #scroller {
+    position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    scroll-snap-type: y mandatory; overscroll-behavior: contain;
+  }
+  .card {
+    height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 92px) 26px calc(env(safe-area-inset-bottom, 0px) + 56px);
+  }
+  .inner { max-width: 34rem; width: 100%; margin: 0 auto; }
+  .big { margin: 0 0 22px; font-size: clamp(32px, 9vw, 48px); line-height: 1.04; letter-spacing: -0.028em; font-weight: 750; }
+  .txt { margin: 0; font-size: 19px; line-height: 1.55; max-width: 32rem; }
+  .hint { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); text-align: center; font-size: 14px; font-weight: 600; opacity: .8; }
+  .hint svg { display: block; margin: 4px auto 0; width: 18px; height: 18px; animation: nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+
+  .qlabel { display: inline-block; margin: 0 0 16px; padding: 4px 12px; border-radius: 99px; background: var(--accent); color: var(--bg); font-size: 14px; font-weight: 700; }
+  .opts { display: grid; gap: 10px; margin: 0 0 18px; }
+  .opt {
+    text-align: left; padding: 15px 16px; border-radius: 14px; border: 2px solid color-mix(in srgb, var(--fg) 35%, transparent);
+    background: color-mix(in srgb, var(--fg) 8%, transparent); font-size: 18px; line-height: 1.3; font-weight: 600; cursor: pointer;
+    transition: background .2s, border-color .2s, opacity .2s;
+  }
+  .opt[disabled] { cursor: default; }
+  .opt.correct { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .opt.wrong { border-style: dashed; opacity: .6; text-decoration: line-through; }
+  .opt.dim { opacity: .5; }
+  .why { margin: 0; font-size: 18px; line-height: 1.5; min-height: 0; }
+  .why strong { font-weight: 800; }
+
+  .fin-actions { display: grid; gap: 10px; margin-top: 26px; }
+  .btn { padding: 15px 18px; border-radius: 14px; border: 2px solid var(--fg); background: transparent; font-size: 17px; font-weight: 700; cursor: pointer; text-align: center; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hint svg { animation: none; }
+    .seg, .opt { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<main id="home">
+  <div class="head">
+    <h1>Learn something small.</h1>
+    <p>Pick a topic, then scroll. Each one takes about two minutes and ends with a couple of quick checks.</p>
+    <div class="tally" id="tally"></div>
+  </div>
+  <div class="bands" id="bands"></div>
+  <div class="foot"><button class="linkbtn" id="reset">Reset my progress</button></div>
+</main>
+
+<div id="lesson" hidden>
+  <div class="top">
+    <div class="top-row">
+      <button class="back" id="back" aria-label="Back to topics">&#8249; Topics</button>
+      <span class="top-title" id="topTitle"></span>
+    </div>
+    <div class="segs" id="segs" aria-hidden="true"></div>
+  </div>
+  <div id="scroller" tabindex="0" aria-label="Lesson cards"></div>
+</div>
+
+<script>
+(function () {
+  var ICONS = {
+    space: '<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="20" fill="currentColor"/><ellipse cx="50" cy="50" rx="44" ry="14" fill="none" stroke="currentColor" stroke-width="4" transform="rotate(-20 50 50)"/></svg>',
+    ocean: '<svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"><path d="M4 30 Q16 14 28 30 T52 30 T76 30 T98 30"/><path d="M4 52 Q16 36 28 52 T52 52 T76 52 T98 52"/><path d="M4 74 Q16 58 28 74 T52 74 T76 74 T98 74"/></svg>',
+    body: '<svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 54 H28 L38 22 L52 84 L62 40 L68 54 H98"/></svg>',
+    rome: '<svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"><path d="M12 92 V46 A38 38 0 0 1 88 46 V92"/><path d="M34 92 V58 A16 16 0 0 1 66 58 V92"/></svg>',
+    money: '<svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="6"><circle cx="36" cy="62" r="24"/><circle cx="64" cy="40" r="24" fill="currentColor" stroke="none" opacity=".9"/></svg>',
+    weather: '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M58 4 L20 56 H46 L38 96 L80 40 H54 Z" fill="currentColor"/></svg>'
+  };
+
+  var TOPICS = [
+    {
+      id: "space", title: "Space", blurb: "Planets, stars, and very long days.",
+      bg: "#24245F", fg: "#F2F0FF", accent: "#FFC857",
+      cards: [
+        { big: "A day on Venus is longer than its year.", body: "Venus spins so slowly that one full rotation takes about 243 Earth days. It circles the Sun in about 225. So the Sun rises again less than once a year there." },
+        { big: "The Sun holds 99.86% of the solar system's mass.", body: "Everything else is leftovers: all eight planets, every moon, every asteroid. Jupiter alone is more than twice as massive as all the other planets combined." },
+        { big: "Sunlight is 8 minutes old when it reaches you.", body: "Light travels about 300,000 kilometers every second, and the Sun is about 150 million kilometers away. The trip takes roughly 8 minutes and 20 seconds." },
+        { quiz: true, q: "How long does sunlight take to reach Earth?", opts: ["About 8 seconds", "About 8 minutes", "About 8 hours"], a: 1, why: "About 8 minutes. If the Sun vanished, we would not notice for that long." },
+        { big: "A teaspoon of neutron star weighs about a billion tons.", body: "When a huge star collapses, its core can be crushed into a ball about 20 kilometers wide, denser than anything else we can observe short of a black hole." },
+        { big: "Footprints on the Moon may last millions of years.", body: "The Moon has no wind or rain to erase them. Only tiny meteorite impacts and slow shifting of dust wear them away, and that happens very gradually." },
+        { quiz: true, q: "On Venus, which is longer?", opts: ["Its day", "Its year", "They are exactly equal"], a: 0, why: "Its day. About 243 Earth days to rotate once, versus about 225 to orbit the Sun." }
+      ]
+    },
+    {
+      id: "ocean", title: "The ocean", blurb: "Deep, dark, and mostly unmapped.",
+      bg: "#0B5D6B", fg: "#E9FBFC", accent: "#FFB38A",
+      cards: [
+        { big: "Only about a quarter of the seafloor is mapped in high detail.", body: "We have better maps of the surface of Mars and the Moon. Ships have to sweep the seafloor with sonar, and the ocean is enormous." },
+        { big: "Tiny plankton make roughly half the oxygen you breathe.", body: "Microscopic ocean organisms photosynthesize just like plants do. Combined, they account for around half of the oxygen produced on Earth each year." },
+        { big: "An octopus has three hearts and blue blood.", body: "Two hearts push blood through the gills, and a third sends it around the body. Their blood carries oxygen with a copper-based molecule, which is what makes it blue." },
+        { quiz: true, q: "How many hearts does an octopus have?", opts: ["One", "Two", "Three"], a: 2, why: "Three. Two for the gills and one for the rest of the body." },
+        { big: "The ocean's deepest point is over 10,900 meters down.", body: "That spot is in the Mariana Trench, in the western Pacific. Mount Everest is about 8,850 meters tall, so it would fit inside with room to spare." },
+        { big: "Most deep-sea animals make their own light.", body: "Sunlight fades out by around 200 meters and is gone by about 1,000. Below that, many creatures use bioluminescence to hunt, hide, or signal each other." },
+        { quiz: true, q: "If you dropped Mount Everest into the deepest trench, what happens?", opts: ["Its peak sticks out above the water", "Its peak is just barely covered", "It is covered by over 2 km of water"], a: 2, why: "The peak would be covered by more than 2 kilometers of water." }
+      ]
+    },
+    {
+      id: "body", title: "Human body", blurb: "Small facts about the machine you live in.",
+      bg: "#C93A57", fg: "#FFFFFF", accent: "#FFE3A3",
+      cards: [
+        { big: "Your heart beats about 100,000 times a day.", body: "That is around 35 million times a year, moving several liters of blood through your body every minute without you thinking about it." },
+        { big: "Your brain is 2% of your weight and uses about 20% of your energy.", body: "Thinking is expensive. Even at rest, your brain burns a fifth of your calories, keeping neurons ready to fire." },
+        { quiz: true, q: "Roughly how much of your body's energy does the brain use?", opts: ["About 2%", "About 20%", "About 50%"], a: 1, why: "About 20%, even though it is only around 2% of your body weight." },
+        { big: "Babies are born with around 300 bones. Adults have 206.", body: "Many of a baby's bones start as soft cartilage in separate pieces. As you grow they fuse together, like the plates of the skull and the base of the spine." },
+        { big: "Skin is your largest organ.", body: "It covers about 1.5 to 2 square meters on an adult. It keeps water in, keeps germs out, and helps regulate your temperature." },
+        { big: "Nerve signals can travel over 100 meters per second.", body: "The fastest fibers are wrapped in an insulating coating called myelin, letting signals jump along them. That is why you can yank your hand off a hot pan before you feel the pain." },
+        { quiz: true, q: "How many bones does a typical adult have?", opts: ["106", "206", "306"], a: 1, why: "206. Babies start with more, and many fuse as they grow." }
+      ]
+    },
+    {
+      id: "rome", title: "Ancient Rome", blurb: "Roads, concrete, and a very big arena.",
+      bg: "#8C3B24", fg: "#FFF1E4", accent: "#F3C77A",
+      cards: [
+        { big: "Romans built about 80,000 km of paved roads.", body: "Layers of gravel, sand, and stone gave them drainage and durability. They connected an empire so well that we still say all roads lead to Rome." },
+        { big: "Roman concrete may repair its own cracks.", body: "Researchers have found small lime chunks in Roman concrete. When water seeps into a crack, those chunks can react and help fill it, which may be part of why some structures still stand." },
+        { big: "Aqueducts ran on gravity alone.", body: "Engineers built channels with a very gentle downward slope, sometimes only a few centimeters per kilometer. Water flowed from distant springs into cities with no pumps at all." },
+        { quiz: true, q: "How did Roman aqueducts move water?", opts: ["Steam pumps", "Gravity and a gentle slope", "Teams of people with buckets"], a: 1, why: "Gravity. A carefully planned downhill slope did the work." },
+        { big: "The Colosseum could hold an estimated 50,000 spectators.", body: "It had dozens of numbered entrances so crowds could find their seats quickly, and a giant retractable awning, worked by sailors, to shade them." },
+        { big: "The Western Roman Empire fell in 476 CE. The Eastern half lasted until 1453.", body: "The eastern half, often called the Byzantine Empire, kept going for nearly a thousand more years, with its capital at Constantinople." },
+        { quiz: true, q: "In what year is the Western Roman Empire traditionally said to have fallen?", opts: ["27 BCE", "476 CE", "1066 CE"], a: 1, why: "476 CE, when the last western emperor was removed from power." }
+      ]
+    },
+    {
+      id: "money", title: "Money basics", blurb: "How savings grow and prices creep.",
+      bg: "#1F6B45", fg: "#EFFBF3", accent: "#F4E27A",
+      cards: [
+        { big: "Compound interest means your interest earns interest.", body: "Put in 1,000 at 7% a year and you earn 70. The next year you earn 7% on 1,070, not just on the original 1,000. The gap between the two grows every year." },
+        { big: "The rule of 72 estimates how fast money doubles.", body: "Divide 72 by the yearly return. At 6%, money doubles in about 12 years. At 9%, about 8 years. It is a quick mental shortcut, not an exact answer." },
+        { quiz: true, q: "Using the rule of 72, about how long to double money at 8% a year?", opts: ["4 years", "9 years", "18 years"], a: 1, why: "72 divided by 8 is 9. About 9 years." },
+        { big: "Inflation quietly shrinks what your cash can buy.", body: "At 2% inflation, prices double in about 36 years by the same rule of 72. The money in your wallet stays the same number but buys less." },
+        { big: "An emergency fund is a cushion for surprises.", body: "A common guideline is three to six months of essential expenses in an easy-to-reach account. It keeps a car repair or job gap from turning into debt." },
+        { big: "Starting early beats saving more later.", body: "Because growth compounds, money invested for 40 years has far more time to snowball than the same money invested for 30. Time does much of the heavy lifting." },
+        { quiz: true, q: "Two people save the same amount each month. One starts at 25, the other at 35. Who likely ends up with more?", opts: ["The one who started at 25", "The one who started at 35", "They end up the same"], a: 0, why: "The one who started at 25. Ten extra years of compounding adds up." }
+      ]
+    },
+    {
+      id: "weather", title: "Weather", blurb: "Lightning, raindrops, and heavy clouds.",
+      bg: "#F5C542", fg: "#1C1B14", accent: "#2B3A67",
+      cards: [
+        { big: "Lightning is about five times hotter than the Sun's surface.", body: "A bolt heats the air around it to roughly 30,000 degrees Celsius for a split second. The Sun's surface is about 5,500." },
+        { big: "Thunder is air being blasted apart.", body: "The superheated air expands so fast it creates a shock wave. Light reaches you almost instantly, but sound travels about a kilometer every three seconds." },
+        { quiz: true, q: "You count 15 seconds between a flash and its thunder. About how far away is the strike?", opts: ["500 meters", "5 kilometers", "50 kilometers"], a: 1, why: "About 5 kilometers. Divide the seconds by 3 to get kilometers." },
+        { big: "Raindrops are not shaped like teardrops.", body: "Tiny drops are nearly round. Larger ones flatten on the bottom as they fall, a bit like a hamburger bun. The teardrop shape is just a drawing habit." },
+        { big: "A fluffy cloud can weigh hundreds of tonnes.", body: "A typical cumulus cloud holds hundreds of tonnes of water droplets. They float because the droplets are tiny and spread across a huge volume of rising air." },
+        { big: "Hurricane, typhoon, and cyclone are the same kind of storm.", body: "The name depends on where it forms. It is a hurricane in the Atlantic and northeast Pacific, a typhoon in the northwest Pacific, and a cyclone in the Indian Ocean and South Pacific." },
+        { quiz: true, q: "What is the difference between a hurricane and a typhoon?", opts: ["Typhoons are always stronger", "Just the region where they form", "Hurricanes have no rain"], a: 1, why: "Just the region. It is the same type of tropical storm with a different local name." }
+      ]
+    }
+  ];
+
+  var KEY = "scroll-and-learn-v1";
+  var progress = {};
+  try { progress = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { progress = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(progress)); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var home = $("home"), lesson = $("lesson"), scroller = $("scroller"), segsEl = $("segs");
+  var observer = null, current = null, scores = null;
+
+  function tokens(el, t) {
+    el.style.setProperty("--bg", t.bg);
+    el.style.setProperty("--fg", t.fg);
+    el.style.setProperty("--accent", t.accent);
+  }
+  function quizCount(t) { return t.cards.filter(function (c) { return c.quiz; }).length; }
+
+  /* ---------- Home ---------- */
+  function renderHome() {
+    var bands = $("bands");
+    bands.innerHTML = "";
+    var doneCount = 0;
+    TOPICS.forEach(function (t) {
+      var b = document.createElement("button");
+      b.className = "band";
+      tokens(b, t);
+      var p = progress[t.id];
+      if (p) doneCount++;
+      var meta = p
+        ? '<span class="meta done">Finished, ' + p.score + ' of ' + p.total + ' checks right</span>'
+        : '<span class="meta">' + t.cards.length + ' cards</span>';
+      b.innerHTML = "<h2>" + t.title + '</h2><p class="blurb">' + t.blurb + "</p>" + meta + ICONS[t.id];
+      b.addEventListener("click", function () { openTopic(t.id); });
+      bands.appendChild(b);
+    });
+    $("tally").textContent = doneCount === 0
+      ? TOPICS.length + " topics to explore"
+      : doneCount + " of " + TOPICS.length + " topics finished";
+  }
+
+  /* ---------- Lesson ---------- */
+  function openTopic(id) {
+    current = TOPICS.filter(function (t) { return t.id === id; })[0];
+    scores = {};
+    tokens(lesson, current);
+    $("topTitle").textContent = current.title;
+    buildCards();
+    home.hidden = true;
+    lesson.hidden = false;
+    document.documentElement.style.overflow = "hidden";
+    scroller.scrollTop = 0;
+    scroller.focus({ preventScroll: true });
+  }
+
+  function closeTopic() {
+    if (observer) observer.disconnect();
+    lesson.hidden = true;
+    home.hidden = false;
+    document.documentElement.style.overflow = "";
+    renderHome();
+    window.scrollTo(0, 0);
+  }
+
+  function buildCards() {
+    scroller.innerHTML = "";
+    segsEl.innerHTML = "";
+    var total = current.cards.length + 1;
+    for (var s = 0; s < total; s++) {
+      var seg = document.createElement("div");
+      seg.className = "seg" + (s === 0 ? " on" : "");
+      segsEl.appendChild(seg);
+    }
+
+    current.cards.forEach(function (c, i) {
+      var sec = document.createElement("section");
+      sec.className = "card";
+      sec.dataset.index = i;
+      var inner = document.createElement("div");
+      inner.className = "inner";
+
+      if (c.quiz) {
+        inner.innerHTML = '<span class="qlabel">Quick check</span><h2 class="big"></h2><div class="opts"></div><p class="why" aria-live="polite"></p>';
+        inner.querySelector(".big").textContent = c.q;
+        var opts = inner.querySelector(".opts");
+        c.opts.forEach(function (label, oi) {
+          var ob = document.createElement("button");
+          ob.className = "opt";
+          ob.textContent = label;
+          ob.addEventListener("click", function () { answer(i, oi, opts, inner.querySelector(".why")); });
+          opts.appendChild(ob);
+        });
+      } else {
+        inner.innerHTML = '<h2 class="big"></h2><p class="txt"></p>';
+        inner.querySelector(".big").textContent = c.big;
+        inner.querySelector(".txt").textContent = c.body;
+      }
+      sec.appendChild(inner);
+
+      if (i === 0) {
+        var hint = document.createElement("div");
+        hint.className = "hint";
+        hint.innerHTML = 'Scroll to continue<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l6 6 6-6"/></svg>';
+        sec.appendChild(hint);
+      }
+      scroller.appendChild(sec);
+    });
+
+    var fin = document.createElement("section");
+    fin.className = "card";
+    fin.dataset.index = current.cards.length;
+    fin.innerHTML = '<div class="inner" id="finInner"></div>';
+    scroller.appendChild(fin);
+
+    if (observer) observer.disconnect();
+    observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          var idx = parseInt(en.target.dataset.index, 10);
+          Array.prototype.forEach.call(segsEl.children, function (el, k) {
+            el.classList.toggle("on", k <= idx);
+          });
+          if (idx === current.cards.length) renderFinale();
+        }
+      });
+    }, { root: scroller, threshold: 0.6 });
+    Array.prototype.forEach.call(scroller.children, function (el) { observer.observe(el); });
+  }
+
+  function answer(cardIdx, chosen, optsEl, whyEl) {
+    if (scores[cardIdx] !== undefined) return;
+    var c = current.cards[cardIdx];
+    var right = chosen === c.a;
+    scores[cardIdx] = right;
+    Array.prototype.forEach.call(optsEl.children, function (btn, k) {
+      btn.disabled = true;
+      if (k === c.a) btn.classList.add("correct");
+      else if (k === chosen) btn.classList.add("wrong");
+      else btn.classList.add("dim");
+    });
+    whyEl.innerHTML = "<strong>" + (right ? "Correct. " : "Not quite. ") + "</strong>";
+    whyEl.appendChild(document.createTextNode(c.why));
+  }
+
+  function renderFinale() {
+    var total = quizCount(current);
+    var score = Object.keys(scores).filter(function (k) { return scores[k]; }).length;
+    var idx = TOPICS.indexOf(current);
+    var next = TOPICS[(idx + 1) % TOPICS.length];
+    var prev = progress[current.id];
+    if (!prev || score >= prev.score) {
+      progress[current.id] = { score: score, total: total };
+      save();
+    }
+    var msg = score === total ? "All " + total + " checks right." : score + " of " + total + " checks right.";
+    var inner = $("finInner");
+    inner.innerHTML = '<h2 class="big"></h2><p class="txt"></p><div class="fin-actions"><button class="btn primary" id="nextBtn"></button><button class="btn" id="homeBtn">Back to topics</button></div>';
+    inner.querySelector(".big").textContent = current.title + ": done.";
+    inner.querySelector(".txt").textContent = msg + " You can scroll back up to review any card.";
+    $("nextBtn").textContent = "Next topic: " + next.title;
+    $("nextBtn").addEventListener("click", function () { openTopic(next.id); });
+    $("homeBtn").addEventListener("click", closeTopic);
+  }
+
+  $("back").addEventListener("click", closeTopic);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !lesson.hidden) closeTopic(); });
+  $("reset").addEventListener("click", function () {
+    progress = {};
+    save();
+    renderHome();
+  });
+
+  renderHome();
+})();
+</script>
+</body>
+</html>
